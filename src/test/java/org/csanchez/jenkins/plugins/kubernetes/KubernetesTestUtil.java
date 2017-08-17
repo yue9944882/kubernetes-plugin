@@ -44,6 +44,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import hudson.model.Node;
 import io.fabric8.kubernetes.api.model.Cluster;
 import io.fabric8.kubernetes.api.model.Config;
 import io.fabric8.kubernetes.api.model.NamedCluster;
@@ -58,6 +59,7 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.internal.KubeConfigUtils;
 import io.fabric8.kubernetes.client.utils.Utils;
+import jenkins.model.Jenkins;
 
 public class KubernetesTestUtil {
 
@@ -102,6 +104,32 @@ public class KubernetesTestUtil {
     }
 
     /**
+     * Wait for Jenkins nodes (agents) to be deleted
+     */
+    public static void waitForNodeDeletion(Jenkins jenkins) throws Exception {
+        try {
+            new ForkJoinPool(1).submit(() -> IntStream.range(1, 1_000_000).anyMatch(i -> {
+                try {
+                    List<Node> nodes = jenkins.getNodes();
+                    LOGGER.log(INFO, "Still waiting for nodes to be deleted: {0}", nodes);
+                    if (nodes.isEmpty()) {
+                        LOGGER.log(INFO, "All nodes are deleted");
+                    } else {
+                        LOGGER.log(INFO, "Still waiting for nodes to be deleted: {0}", nodes);
+                        Thread.sleep(5000);
+                    }
+                    return nodes.isEmpty();
+                } catch (InterruptedException e) {
+                    LOGGER.log(INFO, "Waiting for nodes to be deleted - interrupted");
+                    return true;
+                }
+            })).get(30, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            LOGGER.log(INFO, "Waiting for nodes to be deleted - timed out");
+        }
+    }
+
+    /**
      * Delete pods with matching labels
      * 
      * @param client
@@ -119,9 +147,8 @@ public class KubernetesTestUtil {
             // wait for 30 seconds for all pods to be terminated
             if (wait) {
                 LOGGER.log(INFO, "Waiting for pods to terminate");
-                ForkJoinPool forkJoinPool = new ForkJoinPool(1);
                 try {
-                    forkJoinPool.submit(() -> IntStream.range(1, 1_000_000).anyMatch(i -> {
+                    new ForkJoinPool(1).submit(() -> IntStream.range(1, 1_000_000).anyMatch(i -> {
                         try {
                             FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pods = client.pods()
                                     .withLabels(labels);

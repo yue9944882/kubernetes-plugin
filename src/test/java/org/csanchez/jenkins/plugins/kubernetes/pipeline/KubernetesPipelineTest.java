@@ -37,8 +37,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRuleNonLocalhost;
+import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 import hudson.model.Node;
 import hudson.slaves.DumbSlave;
@@ -46,7 +46,6 @@ import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 /**
  * @author Carlos Sanchez

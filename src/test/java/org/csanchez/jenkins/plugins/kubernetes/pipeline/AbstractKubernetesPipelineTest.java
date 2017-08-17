@@ -81,6 +81,9 @@ public class AbstractKubernetesPipelineTest {
 
     @After
     public void cleanup() throws Exception {
+        waitForNodeDeletion(r.getInstance());
+        assertEquals("There are agents left in Jenkins after test execution", Collections.emptyList(),
+                r.getInstance().getNodes());
         assertFalse("There are pods leftover after test execution, see previous logs",
                 deletePods(cloud.connect(), KubernetesCloud.DEFAULT_POD_LABELS, true));
     }
