@@ -12,7 +12,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.durabletask.executors.Messages;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
-import org.jvnet.localizer.Localizable;
 import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -130,11 +129,14 @@ public class KubernetesSlave extends AbstractCloudSlave {
             return;
         }
 
+        // disconnect the node the first thing to ensure connection is gracefully closed
+        computer.disconnect(OfflineCause.create(hudson.model.Messages._Hudson_NodeBeingRemoved()));
+        LOGGER.log(Level.INFO, "Disconnected computer {0}", name);
+
         if (getCloudName() == null) {
             String msg = String.format("Cloud name is not set for agent, can't terminate: %s", name);
             LOGGER.log(Level.SEVERE, msg);
             listener.fatalError(msg);
-            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
 
@@ -143,7 +145,6 @@ public class KubernetesSlave extends AbstractCloudSlave {
             String msg = String.format("Agent cloud no longer exists: %s", getCloudName());
             LOGGER.log(Level.WARNING, msg);
             listener.fatalError(msg);
-            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
         if (!(cloud instanceof KubernetesCloud)) {
@@ -151,7 +152,6 @@ public class KubernetesSlave extends AbstractCloudSlave {
                     getCloudName());
             LOGGER.log(Level.SEVERE, msg);
             listener.fatalError(msg);
-            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
         KubernetesClient client;
@@ -161,7 +161,6 @@ public class KubernetesSlave extends AbstractCloudSlave {
                 | KeyStoreException e) {
             String msg = String.format("Failed to connect to cloud %s", getCloudName());
             listener.fatalError(msg);
-            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
 
@@ -179,15 +178,12 @@ public class KubernetesSlave extends AbstractCloudSlave {
                     e.getMessage());
             LOGGER.log(Level.WARNING, msg, e);
             listener.error(msg);
-            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
 
         String msg = String.format("Terminated Kubernetes instance for agent %s/%s", actualNamespace, name);
         LOGGER.log(Level.INFO, msg);
         listener.getLogger().println(msg);
-        computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
-        LOGGER.log(Level.INFO, "Disconnected computer {0}", name);
     }
 
     @Override
