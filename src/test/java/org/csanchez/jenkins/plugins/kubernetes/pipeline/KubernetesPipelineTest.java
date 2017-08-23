@@ -25,6 +25,7 @@
 package org.csanchez.jenkins.plugins.kubernetes.pipeline;
 
 import static org.junit.Assert.*;
+import static org.csanchez.jenkins.plugins.kubernetes.KubernetesTestUtil.*;
 
 import java.util.Collections;
 
@@ -104,6 +105,17 @@ public class KubernetesPipelineTest extends AbstractKubernetesPipelineTest {
     }
 
     @Test
+    public void runWithEnvVariablesInContext() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(loadPipelineScript("runWithEnvVarsFromContext.groovy"), true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        assertNotNull(b);
+        r.assertBuildStatusSuccess(r.waitForCompletion(b));
+        r.assertLogNotContains("The value of FROM_ENV_DEFINITION is ABC", b);
+        r.assertLogContains("The value of FROM_WITHENV_DEFINITION is DEF", b);
+    }
+
+    @Test
     public void runWithExistingEnvVariables() throws Exception {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition(loadPipelineScript("runInPodWithExistingTemplate.groovy"), true));
@@ -153,7 +165,7 @@ public class KubernetesPipelineTest extends AbstractKubernetesPipelineTest {
 
     @Test
     public void runWithOverriddenNamespace() throws Exception {
-        String overriddenNamespace = "kubernetes-plugin-overridden-namespace";
+        String overriddenNamespace = TESTING_NAMESPACE + "-overridden-namespace";
         KubernetesClient client = cloud.connect();
         // Run in our own testing namespace
         client.namespaces().createOrReplace(
@@ -176,16 +188,16 @@ public class KubernetesPipelineTest extends AbstractKubernetesPipelineTest {
     /**
      * Step namespace should have priority over anything else.
      */
-    public void runWithOverriddenNamespace2() throws Exception {
-        String overriddenNamespace = "kubernetes-plugin-overridden-namespace";
+    public void runWithStepOverriddenNamespace() throws Exception {
+        String overriddenNamespace = TESTING_NAMESPACE + "-overridden-namespace";
+        String stepNamespace = TESTING_NAMESPACE + "-overridden-namespace2";
         KubernetesClient client = cloud.connect();
         // Run in our own testing namespace
         client.namespaces().createOrReplace(
-                new NamespaceBuilder().withNewMetadata().withName("testns2").endMetadata()
-                        .build());
+                new NamespaceBuilder().withNewMetadata().withName(stepNamespace).endMetadata().build());
 
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "job with dir");
-        p.setDefinition(new CpsFlowDefinition(loadPipelineScript("runWithOverriddenNamespace2.groovy"), true));
+        p.setDefinition(new CpsFlowDefinition(loadPipelineScript("runWithStepOverriddenNamespace.groovy"), true));
 
         WorkflowRun b = p.scheduleBuild2(0).waitForStart();
         NamespaceAction namespaceAction = new NamespaceAction(b);
@@ -193,7 +205,7 @@ public class KubernetesPipelineTest extends AbstractKubernetesPipelineTest {
 
         assertNotNull(b);
         r.assertBuildStatusSuccess(r.waitForCompletion(b));
-        r.assertLogContains("testns2", b);
+        r.assertLogContains(stepNamespace, b);
     }
 
     @Test
