@@ -5,6 +5,10 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateEncodingException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -130,8 +134,13 @@ public class KubernetesSlave extends AbstractCloudSlave {
         }
 
         // disconnect the node the first thing to ensure connection is gracefully closed
-        computer.disconnect(OfflineCause.create(hudson.model.Messages._Hudson_NodeBeingRemoved()));
-        LOGGER.log(Level.INFO, "Disconnected computer {0}", name);
+        Future<?> disconnect = computer.disconnect(OfflineCause.create(hudson.model.Messages._Hudson_NodeBeingRemoved()));
+        try {
+            disconnect.get(60, TimeUnit.SECONDS);
+            LOGGER.log(Level.INFO, "Disconnected computer: {0}", name);
+        } catch (ExecutionException | TimeoutException e) {
+            LOGGER.log(Level.INFO, "Error gracefully disconnecting computer, will terminate: {0}", name);
+        }
 
         if (getCloudName() == null) {
             String msg = String.format("Cloud name is not set for agent, can't terminate: %s", name);
