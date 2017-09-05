@@ -12,6 +12,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.durabletask.executors.Messages;
@@ -104,6 +106,7 @@ public class KubernetesSlave extends AbstractCloudSlave {
         return namespace;
     }
 
+    @Nonnull
     public KubernetesCloud getCloud() {
         Cloud cloud = Jenkins.getInstance().getCloud(getCloudName());
         if (cloud instanceof KubernetesCloud) {
@@ -159,6 +162,7 @@ public class KubernetesSlave extends AbstractCloudSlave {
             return;
         }
 
+<<<<<<< HEAD
         Cloud cloud = getCloud();
         if (cloud == null) {
             String msg = String.format("Agent cloud no longer exists: %s", getCloudName());
@@ -173,9 +177,12 @@ public class KubernetesSlave extends AbstractCloudSlave {
             listener.fatalError(msg);
             return;
         }
+=======
+        KubernetesCloud cloud = getCloud();
+>>>>>>> Fix findbugs issues
         KubernetesClient client;
         try {
-            client = ((KubernetesCloud) cloud).connect();
+            client = cloud.connect();
         } catch (UnrecoverableKeyException | CertificateEncodingException | NoSuchAlgorithmException
                 | KeyStoreException e) {
             String msg = String.format("Failed to connect to cloud %s", getCloudName());
