@@ -106,8 +106,21 @@ public class KubernetesSlave extends AbstractCloudSlave {
         return namespace;
     }
 
+    /**
+
+     * @deprecated Please use the strongly typed getKubernetesCloud() instead.
+     */
+    @Deprecated
+    public Cloud getCloud() {
+        return Jenkins.getInstance().getCloud(getCloudName());
+    }
+
+    /**
+     * Returns the cloud instance which created this slave.
+     * @return the cloud instance which created this slave.
+     */
     @Nonnull
-    public KubernetesCloud getCloud() {
+    public KubernetesCloud getKubernetesCloud() {
         Cloud cloud = Jenkins.getInstance().getCloud(getCloudName());
         if (cloud instanceof KubernetesCloud) {
             return (KubernetesCloud) cloud;
@@ -162,24 +175,7 @@ public class KubernetesSlave extends AbstractCloudSlave {
             return;
         }
 
-<<<<<<< HEAD
-        Cloud cloud = getCloud();
-        if (cloud == null) {
-            String msg = String.format("Agent cloud no longer exists: %s", getCloudName());
-            LOGGER.log(Level.WARNING, msg);
-            listener.fatalError(msg);
-            return;
-        }
-        if (!(cloud instanceof KubernetesCloud)) {
-            String msg = String.format("Agent cloud is not a KubernetesCloud, something is very wrong: %s",
-                    getCloudName());
-            LOGGER.log(Level.SEVERE, msg);
-            listener.fatalError(msg);
-            return;
-        }
-=======
-        KubernetesCloud cloud = getCloud();
->>>>>>> Fix findbugs issues
+        KubernetesCloud cloud = getKubernetesCloud();
         KubernetesClient client;
         try {
             client = cloud.connect();
