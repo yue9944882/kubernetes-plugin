@@ -18,6 +18,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.durabletask.executors.Messages;
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
+import org.jvnet.localizer.Localizable;
 import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -176,8 +177,15 @@ public class KubernetesSlave extends AbstractCloudSlave {
             listener.fatalError(msg);
             return;
         }
-
-        KubernetesCloud cloud = getKubernetesCloud();
+        KubernetesCloud cloud;
+        try {
+            cloud = getKubernetesCloud();
+        } catch (IllegalStateException e) {
+            e.printStackTrace(listener.fatalError("Unable to terminate slave. Cloud may have been removed. There may be leftover resources on the Kubernetes cluster."));
+            LOGGER.log(Level.SEVERE, String.format("Unable to terminate slave %s. Cloud may have been removed. There may be leftover resources on the Kubernetes cluster.", name));
+            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
+            return;
+        }
         KubernetesClient client;
         try {
             client = cloud.connect();
@@ -185,6 +193,8 @@ public class KubernetesSlave extends AbstractCloudSlave {
                 | KeyStoreException e) {
             String msg = String.format("Failed to connect to cloud %s", getCloudName());
             listener.fatalError(msg);
+            e.printStackTrace(listener.fatalError(msg));
+            computer.disconnect(OfflineCause.create(new Localizable(HOLDER, "offline")));
             return;
         }
 
